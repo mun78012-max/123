@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>중학교 자치시간 모둠 구성 프로그램</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Pretendard', sans-serif;
+    }
+    .perspective {
+      perspective: 1000px;
+    }
+    .card-inner {
+      transition: transform 0.6s;
+      transform-style: preserve-3d;
+    }
+    .card-flipped {
+      transform: rotateY(180deg);
+    }
+    .card-front, .card-back {
+      backface-visibility: hidden;
+    }
+    .card-back {
+      transform: rotateY(180deg);
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="p-2.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg shadow-indigo-500/20">
+          <i class="fa-solid fa-people-group text-2xl text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+            모두의 자치실
+          </h1>
+          <p class="text-xs text-slate-400">행복하고 공정한 학급 자치시간 모둠 메이커</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="resetAllData()" class="px-3 py-1.5 text-xs font-semibold text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 rounded-xl transition duration-200">
+          <i class="fa-solid fa-trash-can mr-1"></i> 데이터 초기화
+        </button>
+        <span class="text-xs text-slate-500 bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700/50">
+          v1.2.0 Active
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
+    
+    <!-- Left Sidebar: Student Management -->
+    <section class="lg:col-span-4 flex flex-col gap-6">
+      <!-- Fast Batch Input & Student Count -->
+      <div class="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5 shadow-xl backdrop-blur-sm">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-bold flex items-center gap-2">
+            <i class="fa-solid fa-users text-indigo-400"></i>
+            학생 명단 관리
+          </h2>
+          <span id="studentCountBadge" class="bg-indigo-500/20 text-indigo-300 text-xs font-bold px-2.5 py-1 rounded-full border border-indigo-500/30">
+            등록: 0명
+          </span>
+        </div>
+
+        <!-- Single Student Input Form -->
+        <form id="studentForm" onsubmit="addStudent(event)" class="mb-4">
+          <div class="flex gap-2">
+            <input type="text" id="studentName" placeholder="학생 이름" required maxlength="10"
+              class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-500 transition duration-150">
+            <select id="studentGender" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="남">남</option>
+              <option value="여">여</option>
+            </select>
+            <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm px-4 py-2 rounded-xl transition duration-200 shadow-md shadow-indigo-600/10">
+              추가
+            </button>
+          </div>
+        </form>
+
+        <!-- Bulk Import Option -->
+        <div class="border-t border-slate-700/50 pt-3">
+          <button onclick="toggleBulkModal(true)" class="w-full py-2 bg-slate-700/40 hover:bg-slate-700/70 border border-slate-600/40 text-slate-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition duration-200">
+            <i class="fa-solid fa-file-import text-purple-400"></i>
+            엑셀/텍스트에서 일괄 가져오기
+          </button>
+        </div>
+      </div>
+
+      <!-- Live Student List -->
+      <div class="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5 shadow-xl flex-1 flex flex-col min-h-[300px]">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">현재 학급 학생 명단</span>
+          <button onclick="clearStudentsList()" class="text-xs text-rose-400 hover:text-rose-300 font-semibold transition">
+            전체 비우기
+          </button>
+        </div>
+        
+        <!-- List Box -->
+        <div id="studentsWrapper" class="flex-1 overflow-y-auto max-h-[380px] pr-1 space-y-2 custom-scrollbar">
+          <!-- Dynamically inserted students -->
+          <div id="noStudentsMsg" class="h-full flex flex-col items-center justify-center text-center p-6 text-slate-500">
+            <i class="fa-solid fa-user-slash text-4xl mb-3 opacity-30"></i>
+            <p class="text-sm">등록된 학생이 없습니다.</p>
+            <p class="text-xs mt-1">이름을 직접 입력하거나 일괄 가져오기를 사용하세요.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Area: Group Options & Results -->
+    <section class="lg:col-span-8 flex flex-col gap-6">
+      
+      <!-- Grouping Setup Option Dashboard -->
+      <div class="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
+        <h2 class="text-lg font-bold flex items-center gap-2 mb-5">
+          <i class="fa-solid fa-sliders text-purple-400"></i>
+          모둠 빌딩 설정
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Method Selection & Numeric Inputs -->
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-400 mb-2">모둠 구성 기준</label>
+              <div class="grid grid-cols-2 gap-2">
+                <button onclick="setCriteria('count')" id="btnCriteriaCount" class="py-2.5 rounded-xl border font-bold text-sm transition-all duration-200 bg-indigo-600 border-indigo-500 text-white shadow-md shadow-indigo-600/10">
+                  <i class="fa-solid fa-layer-group mr-1.5"></i> 모둠 개수 지정
+                </button>
+                <button onclick="setCriteria('size')" id="btnCriteriaSize" class="py-2.5 rounded-xl border font-bold text-sm transition-all duration-200 bg-slate-900 border-slate-700 text-slate-400 hover:text-slate-300">
+                  <i class="fa-solid fa-user-group mr-1.5"></i> 모둠 인원 지정
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label id="inputLabel" class="block text-xs font-bold text-slate-400 mb-2">목표 모둠 개수</label>
+              <div class="flex items-center gap-3">
+                <button type="button" onclick="adjustValue(-1)" class="w-10 h-10 bg-slate-700 hover:bg-slate-600 active:scale-95 rounded-xl flex items-center justify-center font-bold text-lg transition duration-150">-</button>
+                <input type="number" id="groupTargetValue" value="4" min="2" max="20" class="w-20 text-center bg-slate-900 border border-slate-700 rounded-xl h-10 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <button type="button" onclick="adjustValue(1)" class="w-10 h-10 bg-slate-700 hover:bg-slate-600 active:scale-95 rounded-xl flex items-center justify-center font-bold text-lg transition duration-150">+</button>
+                <span id="estimatedMsg" class="text-xs text-slate-400"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Advanced Strategy Checkboxes -->
+          <div class="space-y-4 bg-slate-900/40 p-4 rounded-xl border border-slate-800/60">
+            <h3 class="text-xs font-bold text-indigo-400 uppercase tracking-wide">밸런싱 및 자치 옵션</h3>
+            
+            <div class="space-y-3">
+              <!-- Gender Balance -->
+              <label class="flex items-start gap-3 cursor-pointer group">
+                <input type="checkbox" id="balanceGender" checked class="mt-0.5 rounded border-slate-700 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-900 bg-slate-900">
+                <div>
+                  <span class="text-sm font-semibold text-slate-200 group-hover:text-white transition">남녀 성비 균등 배정</span>
+                  <p class="text-xs text-slate-400">모둠별로 남학생과 여학생 비율이 균등하도록 섞습니다.</p>
+                </div>
+              </label>
+
+              <!-- Assign Roles -->
+              <label class="flex items-start gap-3 cursor-pointer group">
+                <input type="checkbox" id="assignRoles" class="mt-0.5 rounded border-slate-700 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-900 bg-slate-900">
+                <div>
+                  <span class="text-sm font-semibold text-slate-200 group-hover:text-white transition">모둠 내 자치 역할 자동 지정</span>
+                  <p class="text-xs text-slate-400">모둠 구성원들에게 모둠장, 기록이, 발표이, 도우미 역할을 지정합니다.</p>
+                </div>
+              </label>
+
+              <!-- Split Specific Members (Avoidance list) -->
+              <div class="pt-1">
+                <button type="button" onclick="toggleAvoidanceModal(true)" class="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 transition">
+                  <i class="fa-solid fa-user-shield"></i>
+                  분리할 학생(기피 조합) 설정하기 (<span id="avoidanceCountText">0</span>)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Trigger Button with Sound Effect Idea -->
+        <div class="mt-6 pt-5 border-t border-slate-700/50 flex flex-col sm:flex-row gap-3">
+          <button onclick="generateGroups()" class="flex-1 py-4 bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-600 hover:from-indigo-600 hover:to-pink-700 text-white font-extrabold text-lg rounded-2xl shadow-xl shadow-indigo-500/25 active:scale-[0.99] transition duration-200 flex items-center justify-center gap-3">
+            <i class="fa-solid fa-wand-magic-sparkles text-xl"></i>
+            자치 모둠 편성하기!
+          </button>
+        </div>
+      </div>
+
+      <!-- Results Panel -->
+      <div class="bg-slate-800/30 border border-slate-700/30 rounded-2xl p-6 shadow-xl flex-1 flex flex-col">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5 pb-4 border-b border-slate-700/40">
+          <div>
+            <h2 class="text-lg font-bold flex items-center gap-2">
+              <i class="fa-solid fa-square-poll-horizontal text-emerald-400"></i>
+              배정 결과 화면
+            </h2>
+            <p class="text-xs text-slate-400 mt-1">배정 완료된 모둠 구성을 실시간으로 확인하고 역할을 확인하세요.</p>
+          </div>
+          
+          <!-- Helper Tools on Result -->
+          <div id="resultTools" class="hidden flex flex-wrap items-center gap-2">
+            <button onclick="shuffleRoles()" class="px-3 py-1.5 text-xs font-semibold bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 text-slate-300 rounded-lg flex items-center gap-1 transition">
+              <i class="fa-solid fa-rotate"></i> 역할 재배정
+            </button>
+            <button onclick="exportToClipboard()" class="px-3 py-1.5 text-xs font-semibold bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 text-slate-300 rounded-lg flex items-center gap-1 transition">
+              <i class="fa-solid fa-copy"></i> 텍스트 복사
+            </button>
+            <button onclick="downloadAsText()" class="px-3 py-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg flex items-center gap-1 transition">
+              <i class="fa-solid fa-download"></i> 결과 저장
+            </button>
+          </div>
+        </div>
+
+        <!-- Group Output Area (Grid of Cards) -->
+        <div id="groupsDisplayArea" class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Placeholder state -->
+          <div class="col-span-full py-16 flex flex-col items-center justify-center text-center text-slate-500">
+            <div class="w-20 h-20 bg-slate-800/50 border border-slate-700/40 rounded-full flex items-center justify-center text-3xl mb-4 text-indigo-400/40 animate-pulse">
+              <i class="fa-solid fa-puzzle-piece"></i>
+            </div>
+            <p class="text-base font-semibold text-slate-400">아직 생성된 모둠이 없습니다.</p>
+            <p class="text-xs mt-1 max-w-sm text-slate-500">설정을 완료하고 '자치 모둠 편성하기!' 버튼을 눌러 결과 카드를 확인해보세요.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Notification Banner -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-800 border border-slate-700 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 max-w-sm">
+    <span id="toastIcon" class="text-indigo-400"><i class="fa-solid fa-circle-info"></i></span>
+    <span id="toastMessage" class="text-sm font-semibold"></span>
+  </div>
+
+  <!-- Modal 1: Bulk Input (일괄 가져오기) -->
+  <div id="bulkModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm hidden">
+    <div class="bg-slate-800 border border-slate-700 w-full max-w-lg rounded-2xl shadow-2xl p-6 transform scale-95 transition-all duration-300">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold flex items-center gap-2">
+          <i class="fa-solid fa-file-lines text-purple-400"></i>
+          학생명단 대량 붙여넣기
+        </h3>
+        <button onclick="toggleBulkModal(false)" class="text-slate-400 hover:text-slate-200">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      
+      <p class="text-xs text-slate-400 mb-3">
+        한 줄에 이름 하나(또는 이름/성별 구분)를 작성해 주세요. 성별을 생략하면 무작위로 자동 지정됩니다.<br>
+        <strong>예시:</strong><br>
+        김민준 남<br>이서연 여<br>박민서<br>정우진 남
+      </p>
+
+      <textarea id="bulkTextArea" rows="8" placeholder="이곳에 명단을 복사해 붙여넣으세요..."
+        class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-slate-200 placeholder-slate-600 mb-4"></textarea>
+
+      <div class="flex justify-end gap-2">
+        <button onclick="toggleBulkModal(false)" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl text-sm font-semibold transition">취소</button>
+        <button onclick="processBulkImport()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-semibold transition">가져오기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Avoidance Configuration (기피 조합 / 분리할 학생 리스트) -->
+  <div id="avoidanceModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm hidden">
+    <div class="bg-slate-800 border border-slate-700 w-full max-w-lg rounded-2xl shadow-2xl p-6 transform scale-95 transition-all duration-300 flex flex-col max-h-[80vh]">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-bold flex items-center gap-2">
+          <i class="fa-solid fa-user-shield text-rose-400"></i>
+          분리할 학생 조합 설정
+        </h3>
+        <button onclick="toggleAvoidanceModal(false)" class="text-slate-400 hover:text-slate-200">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-400 mb-4">
+        서로 다른 모둠으로 분리 배치하고 싶은 학생들을 쌍(Pair)으로 지정해 두세요.<br>
+        지정된 조합의 두 학생은 모둠 편성 시 <strong>강제로 서로 다른 조에 편성</strong>됩니다.
+      </p>
+
+      <!-- Input Pair Form -->
+      <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-700/60 mb-4 grid grid-cols-2 gap-2">
+        <div>
+          <label class="block text-[10px] font-bold text-slate-500 mb-1">학생 A</label>
+          <select id="avoidStudentA" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs focus:ring-1 focus:ring-rose-500">
+            <!-- options generated dynamically -->
+          </select>
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold text-slate-500 mb-1">학생 B</label>
+          <select id="avoidStudentB" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs focus:ring-1 focus:ring-rose-500">
+            <!-- options generated dynamically -->
+          </select>
+        </div>
+        <div class="col-span-2 pt-2">
+          <button onclick="addAvoidancePair()" class="w-full py-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white rounded-lg text-xs font-bold border border-rose-500/30 transition duration-150">
+            분리 조합 등록
+          </button>
+        </div>
+      </div>
+
+      <!-- Live Active Avoidance List -->
+      <div class="flex-1 overflow-y-auto pr-1">
+        <h4 class="text-xs font-bold text-slate-400 mb-2">활성화된 분리 조합 목록</h4>
+        <div id="avoidanceListWrapper" class="space-y-1.5">
+          <!-- Dynamically generated avoidances -->
+          <p class="text-xs text-slate-500 italic text-center py-4">등록된 분리 조합이 없습니다.</p>
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-4 border-t border-slate-700/50 mt-4">
+        <button onclick="toggleAvoidanceModal(false)" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-semibold transition">설정 저장 & 닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio Synth Generator for Interactive Experience -->
+  <script>
+    // Audio synthesizer context for fun retro-inspired sounds
+    let audioCtx = null;
+    function playBeep(freq, type, duration) {
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = type || 'sine';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {
+        console.log('Audio Context error: ', e);
+      }
+    }
+
+    function playSuccessSound() {
+      playBeep(440, 'sine', 0.15);
+      setTimeout(() => playBeep(554.37, 'sine', 0.15), 100);
+      setTimeout(() => playBeep(659.25, 'sine', 0.3), 200);
+    }
+  </script>
+
+  <!-- Core Logical Script for Group Maker -->
+  <script>
+    // Main variables holding state
+    let students = [];
+    let avoidancePairs = []; // Array of arrays: [[id1, id2], ...]
+    let currentCriteria = 'count'; // 'count' or 'size'
+    let currentResultGroups = [];
+
+    // LocalStorage keys
+    const STORAGE_STUDENTS_KEY = '자치모둠_학생명단_120';
+    const STORAGE_AVOID_KEY = '자치모둠_기피명단_120';
+
+    // App Initialization
+    window.onload = function() {
+      loadFromStorage();
+      updateDashboardUI();
+    }
+
+    // Storage logic
+    function saveToStorage() {
+      localStorage.setItem(STORAGE_STUDENTS_KEY, JSON.stringify(students));
+      localStorage.setItem(STORAGE_AVOID_KEY, JSON.stringify(avoidancePairs));
+    }
+
+    function loadFromStorage() {
+      const savedStudents = localStorage.getItem(STORAGE_STUDENTS_KEY);
+      const savedAvoid = localStorage.getItem(STORAGE_AVOID_KEY);
+      if (savedStudents) {
+        try {
+          students = JSON.parse(savedStudents);
+        } catch(e) { students = []; }
+      } else {
+        // Mock default data for demo first impression
+        students = [
+          { id: '1', name: '김지혁', gender: '남' },
+          { id: '2', name: '이서아', gender: '여' },
+          { id: '3', name: '박태양', gender: '남' },
+          { id: '4', name: '최지우', gender: '여' },
+          { id: '5', name: '정도현', gender: '남' },
+          { id: '6', name: '윤하은', gender: '여' },
+          { id: '7', name: '강동우', gender: '남' },
+          { id: '8', name: '한소희', gender: '여' },
+          { id: '9', name: '조유민', gender: '남' },
+          { id: '10', name: '장예진', gender: '여' },
+          { id: '11', name: '신도진', gender: '남' },
+          { id: '12', name: '송아린', gender: '여' }
+        ];
+      }
+
+      if (savedAvoid) {
+        try {
+          avoidancePairs = JSON.parse(savedAvoid);
+        } catch(e) { avoidancePairs = []; }
+      }
+    }
+
+    function resetAllData() {
+      if (confirm('모든 명단과 옵션이 초기화됩니다. 계속하시겠습니까?')) {
+        students = [];
+        avoidancePairs = [];
+        saveToStorage();
+        updateDashboardUI();
+        showToast('데이터가 정상적으로 초기화되었습니다.', 'trash');
+      }
+    }
+
+    // UI Updates
+    function updateDashboardUI() {
+      renderStudentList();
+      renderAvoidanceSelectors();
+      renderAvoidanceList();
+      
+      // Update badge
+      document.getElementById('studentCountBadge').textContent = `등록: ${students.length}명`;
+      document.getElementById('avoidanceCountText').textContent = avoidancePairs.length;
+
+      // Estimated groups calculation description
+      const targetVal = parseInt(document.getElementById('groupTargetValue').value) || 2;
+      const estimatedMsgSpan = document.getElementById('estimatedMsg');
+      if (students.length === 0) {
+        estimatedMsgSpan.textContent = '(등록된 학생 없음)';
+        return;
+      }
+
+      if (currentCriteria === 'count') {
+        const avg = Math.floor(students.length / targetVal);
+        const rem = students.length % targetVal;
+        estimatedMsgSpan.textContent = rem > 0 
+          ? `(모둠당 약 ${avg}~${avg+1}명 배치)` 
+          : `(모둠당 딱 ${avg}명씩 배정)`;
+      } else {
+        const cnt = Math.ceil(students.length / targetVal);
+        estimatedMsgSpan.textContent = `(약 ${cnt}개 모둠 생성 예정)`;
+      }
+    }
+
+    // Toast Alert
+    function showToast(message, iconName = 'circle-info') {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMessage');
+      const toastIcon = document.getElementById('toastIcon');
+      
+      toastIcon.innerHTML = `<i class="fa-solid fa-${iconName}"></i>`;
+      toastMsg.textContent = message;
+      
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+      
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+        toast.classList.remove('translate-y-0', 'opacity-100');
+      }, 3000);
+    }
+
+    // Student Addition
+    function addStudent(event) {
+      event.preventDefault();
+      const nameInput = document.getElementById('studentName');
+      const genderSelect = document.getElementById('studentGender');
+      const name = nameInput.value.trim();
+      const gender = genderSelect.value;
+
+      if (!name) return;
+
+      // Duplicate Check
+      if (students.some(s => s.name === name)) {
+        showToast('이미 존재하는 이름입니다.', 'triangle-exclamation');
+        return;
+      }
+
+      const newStudent = {
+        id: crypto.randomUUID(),
+        name: name,
+        gender: gender
+      };
+
+      students.push(newStudent);
+      saveToStorage();
+      updateDashboardUI();
+      
+      nameInput.value = '';
+      nameInput.focus();
+      playBeep(523.25, 'sine', 0.1); // add sound
+    }
+
+    // Delete Student
+    function removeStudent(id) {
+      // Clean up avoidance pairs that reference this student
+      avoidancePairs = avoidancePairs.filter(pair => pair[0] !== id && pair[1] !== id);
+      
+      students = students.filter(s => s.id !== id);
+      saveToStorage();
+      updateDashboardUI();
+      playBeep(329.63, 'triangle', 0.1);
+    }
+
+    // Clear whole list
+    function clearStudentsList() {
+      if (students.length === 0) return;
+      if (confirm('현재 등록된 모든 학생들을 삭제할까요?')) {
+        students = [];
+        avoidancePairs = [];
+        saveToStorage();
+        updateDashboardUI();
+        showToast('학급 전체 명단이 비워졌습니다.', 'trash-can');
+      }
+    }
+
+    // Render Student list inside scroll box
+    function renderStudentList() {
+      const container = document.getElementById('studentsWrapper');
+      const noMsg = document.getElementById('noStudentsMsg');
+
+      // Clear except placeholder
+      container.innerHTML = '';
+      if (students.length === 0) {
+        container.appendChild(noMsg);
+        return;
+      }
+
+      students.forEach((student, index) => {
+        const item = document.createElement('div');
+        item.className = "flex items-center justify-between bg-slate-900 border border-slate-800/80 rounded-xl px-3.5 py-2.5 transition hover:border-slate-700/60";
+        
+        const isBoy = student.gender === '남';
+        const genderColor = isBoy ? 'text-cyan-400 bg-cyan-950/40 border-cyan-800/50' : 'text-pink-400 bg-pink-950/40 border-pink-800/50';
+
+        item.innerHTML = `
+          <div class="flex items-center gap-2.5">
+            <span class="text-xs text-slate-500 font-bold">${index + 1}</span>
+            <span class="font-semibold text-slate-200 text-sm">${escapeHTML(student.name)}</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded-md border font-bold ${genderColor}">${student.gender}</span>
+          </div>
+          <button onclick="removeStudent('${student.id}')" class="text-slate-500 hover:text-rose-400 transition">
+            <i class="fa-solid fa-square-minus text-base"></i>
+          </button>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    // Criteria Selection Toggle
+    function setCriteria(type) {
+      currentCriteria = type;
+      const btnCount = document.getElementById('btnCriteriaCount');
+      const btnSize = document.getElementById('btnCriteriaSize');
+      const label = document.getElementById('inputLabel');
+      const input = document.getElementById('groupTargetValue');
+
+      if (type === 'count') {
+        btnCount.className = "py-2.5 rounded-xl border font-bold text-sm transition-all duration-200 bg-indigo-600 border-indigo-500 text-white shadow-md shadow-indigo-600/10";
+        btnSize.className = "py-2.5 rounded-xl border font-bold text-sm transition-all duration-200 bg-slate-900 border-slate-700 text-slate-400 hover:text-slate-300";
+        label.textContent = '목표 모둠 개수';
+        input.value = 4;
+        input.min = 2;
+        input.max = 20;
+      } else {
+        btnCount.className = "py-2.5 rounded-xl border font-bold text-sm transition-all duration-200 bg-slate-900 border-slate-700 text-slate-400 hover:text-slate-300";
+        btnSize.className = "py-2.5 rounded-xl border font-bold text-sm transition-all duration-200 bg-indigo-600 border-indigo-500 text-white shadow-md shadow-indigo-600/10";
+        label.textContent = '모둠당 정원 (인원수)';
+        input.value = 4;
+        input.min = 1;
+        input.max = 30;
+      }
+      updateDashboardUI();
+    }
+
+    function adjustValue(diff) {
+      const input = document.getElementById('groupTargetValue');
+      let val = parseInt(input.value) + diff;
+      if (val < parseInt(input.min)) val = parseInt(input.min);
+      if (val > parseInt(input.max)) val = parseInt(input.max);
+      input.value = val;
+      updateDashboardUI();
+      playBeep(600, 'sine', 0.05);
+    }
+
+    // Bulk Modal Logic
+    function toggleBulkModal(show) {
+      const modal = document.getElementById('bulkModal');
+      if (show) {
+        modal.classList.remove('hidden');
+        document.getElementById('bulkTextArea').value = '';
+        setTimeout(() => modal.firstElementChild.classList.remove('scale-95'), 10);
+      } else {
+        modal.firstElementChild.classList.add('scale-95');
+        setTimeout(() => modal.classList.add('hidden'), 150);
+      }
+    }
+
+    function processBulkImport() {
+      const text = document.getElementById('bulkTextArea').value;
+      if (!text.trim()) {
+        toggleBulkModal(false);
+        return;
+      }
+
+      const lines = text.split('\n');
+      let addedCount = 0;
+      let skippedCount = 0;
+
+      lines.forEach(line => {
+        let clean = line.trim();
+        if (!clean) return;
+
+        // Try to separate name and gender by spaces or tabs
+        let parts = clean.split(/\s+/);
+        let name = parts[0];
+        let gender = '남'; // default fallback
+
+        if (parts.length > 1) {
+          let potentialGender = parts[1].trim();
+          if (potentialGender === '여' || potentialGender === '여성' || potentialGender === 'F' || potentialGender === 'girl') {
+            gender = '여';
+          } else if (potentialGender === '남' || potentialGender === '남성' || potentialGender === 'M' || potentialGender === 'boy') {
+            gender = '남';
+          } else {
+            // Random assignment if not matching standard forms
+            gender = Math.random() > 0.5 ? '남' : '여';
+          }
+        } else {
+          // No gender input -> auto balance random allocation
+          gender = Math.random() > 0.5 ? '남' : '여';
+        }
+
+        // Duplicate Check inside current array
+        if (students.some(s => s.name === name)) {
+          skippedCount++;
+        } else {
+          students.push({
+            id: crypto.randomUUID(),
+            name: name,
+            gender: gender
+          });
+          addedCount++;
+        }
+      });
+
+      saveToStorage();
+      updateDashboardUI();
+      toggleBulkModal(false);
+      
+      let alertMsg = `${addedCount}명의 학생이 추가되었습니다.`;
+      if (skippedCount > 0) alertMsg += ` (중복 명단 ${skippedCount}명 제외)`;
+      showToast(alertMsg, 'check-double');
+      playSuccessSound();
+    }
+
+    // Avoidance Modal Logic
+    function toggleAvoidanceModal(show) {
+      const modal = document.getElementById('avoidanceModal');
+      if (show) {
+        modal.classList.remove('hidden');
+        renderAvoidanceSelectors();
+        setTimeout(() => modal.firstElementChild.classList.remove('scale-95'), 10);
+      } else {
+        modal.firstElementChild.classList.add('scale-95');
+        setTimeout(() => modal.classList.add('hidden'), 150);
+      }
+    }
+
+    function renderAvoidanceSelectors() {
+      const selectA = document.getElementById('avoidStudentA');
+      const selectB = document.getElementById('avoidStudentB');
+
+      selectA.innerHTML = '<option value="">선택 안 함</option>';
+      selectB.innerHTML = '<option value="">선택 안 함</option>';
+
+      // Alphabetical sorting for neat view
+      const sortedStudents = [...students].sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+
+      sortedStudents.forEach(s => {
+        const optionHTML = `<option value="${s.id}">${escapeHTML(s.name)} (${s.gender})</option>`;
+        selectA.insertAdjacentHTML('beforeend', optionHTML);
+        selectB.insertAdjacentHTML('beforeend', optionHTML);
+      });
+    }
+
+    function addAvoidancePair() {
+      const idA = document.getElementById('avoidStudentA').value;
+      const idB = document.getElementById('avoidStudentB').value;
+
+      if (!idA || !idB) {
+        showToast('두 명의 학생을 각각 선택해 주셔야 합니다.', 'circle-exclamation');
+        return;
+      }
+      if (idA === idB) {
+        showToast('동일한 학생을 분리할 수 없습니다.', 'triangle-exclamation');
+        return;
+      }
+
+      // Check if duplicate relation already exists
+      const alreadyExists = avoidancePairs.some(pair => 
+        (pair[0] === idA && pair[1] === idB) || (pair[0] === idB && pair[1] === idA)
+      );
+
+      if (alreadyExists) {
+        showToast('이미 등록된 분리 조합입니다.', 'info');
+        return;
+      }
+
+      avoidancePairs.push([idA, idB]);
+      saveToStorage();
+      updateDashboardUI();
+      renderAvoidanceList();
+      showToast('분리 약속 조합이 활성화되었습니다.', 'shield-halved');
+      playBeep(400, 'sine', 0.15);
+    }
+
+    function removeAvoidancePair(index) {
+      avoidancePairs.splice(index, 1);
+      saveToStorage();
+      updateDashboardUI();
+      renderAvoidanceList();
+    }
+
+    function renderAvoidanceList() {
+      const wrapper = document.getElementById('avoidanceListWrapper');
+      wrapper.innerHTML = '';
+
+      if (avoidancePairs.length === 0) {
+        wrapper.innerHTML = '<p class="text-xs text-slate-500 italic text-center py-4">등록된 분리 조합이 없습니다.</p>';
+        return;
+      }
+
+      avoidancePairs.forEach((pair, idx) => {
+        const studentA = students.find(s => s.id === pair[0]);
+        const studentB = students.find(s => s.id === pair[1]);
+
+        if (!studentA || !studentB) return; // defensive
+
+        const tag = document.createElement('div');
+        tag.className = "flex items-center justify-between bg-slate-900 border border-rose-500/10 rounded-lg px-3 py-1.5";
+        tag.innerHTML = `
+          <div class="flex items-center gap-1.5 text-xs">
+            <span class="font-semibold text-slate-300">${escapeHTML(studentA.name)}</span>
+            <i class="fa-solid fa-arrows-split-up-and-left text-rose-500 text-[10px]"></i>
+            <span class="font-semibold text-slate-300">${escapeHTML(studentB.name)}</span>
+          </div>
+          <button onclick="removeAvoidancePair(${idx})" class="text-slate-500 hover:text-rose-400 transition">
+            <i class="fa-solid fa-circle-xmark"></i>
+          </button>
+        `;
+        wrapper.appendChild(tag);
+      });
+    }
+
+    // Role Master Definitions
+    const ROLES = [
+      { name: "👑 모둠장", desc: "자치 토론 회의 진행" },
+      { name: "✍️ 기록이", desc: "의견 정리 및 결과 보고서 작성" },
+      { name: "📢 발표이", desc: "학급 전체 공유 시 대표 발표" },
+      { name: "⏱️ 시간지기", desc: "시간 제한 알람 및 참여 독려" },
+      { name: "🤝 도우미", desc: "칠판 기록 보조 및 소통 도우미" }
+    ];
+
+    // Core Grouping Algorithm (Incorporates Gender Balance & Avoidance Restriction)
+    function generateGroups() {
+      if (students.length === 0) {
+        showToast('편성할 학생 데이터가 존재하지 않습니다.', 'triangle-exclamation');
+        return;
+      }
+
+      const targetVal = parseInt(document.getElementById('groupTargetValue').value) || 2;
+      let totalGroupsCount = 2;
+
+      if (currentCriteria === 'count') {
+        totalGroupsCount = targetVal;
+      } else {
+        totalGroupsCount = Math.ceil(students.length / targetVal);
+      }
+
+      if (totalGroupsCount < 1) totalGroupsCount = 1;
+      if (totalGroupsCount > students.length) totalGroupsCount = students.length;
+
+      // Basic Setup Options
+      const applyGenderBalance = document.getElementById('balanceGender').checked;
+
+      // Shuffle logic with backtracking or simple multi-trial approach to satisfy avoidances
+      let solved = false;
+      let finalGroups = [];
+      let attempts = 0;
+      const MAX_ATTEMPT = 500; // safe trial bound
+
+      while (!solved && attempts < MAX_ATTEMPT) {
+        attempts++;
+        finalGroups = Array.from({ length: totalGroupsCount }, () => []);
+
+        if (applyGenderBalance) {
+          // Divide male and female
+          const boys = shuffle([...students.filter(s => s.gender === '남')]);
+          const girls = shuffle([...students.filter(s => s.gender === '여')]);
+
+          // Distribute boys
+          boys.forEach((boy, idx) => {
+            const groupIdx = idx % totalGroupsCount;
+            finalGroups[groupIdx].push(boy);
+          });
+          // Distribute girls (starting from end or offset to balance mix even better)
+          girls.forEach((girl, idx) => {
+            const groupIdx = (idx + boys.length) % totalGroupsCount;
+            finalGroups[groupIdx].push(girl);
+          });
+        } else {
+          // Just raw shuffle and populate
+          const shuffledAll = shuffle([...students]);
+          shuffledAll.forEach((student, idx) => {
+            const groupIdx = idx % totalGroupsCount;
+            finalGroups[groupIdx].push(student);
+          });
+        }
+
+        // Validate Avoidance Constraint
+        let violates = false;
+        for (const pair of avoidancePairs) {
+          const idA = pair[0];
+          const idB = pair[1];
+          // Find if there is any group containing both ids
+          const sameGroup = finalGroups.some(group => 
+            group.some(s => s.id === idA) && group.some(s => s.id === idB)
+          );
+
+          if (sameGroup) {
+            violates = true;
+            break; // immediate retry
+          }
+        }
+
+        if (!violates) {
+          solved = true;
+        }
+      }
+
+      if (!solved) {
+        showToast('지정된 분리 조건이 까다로워 완벽하게 해결하지 못했습니다. (차선책 출력)', 'circle-info');
+      }
+
+      // Assign roles optionally
+      const assignRolesChecked = document.getElementById('assignRoles').checked;
+      finalGroups.forEach(group => {
+        // Assign roles inside this group
+        const shuffledGroupIndices = shuffle([...Array(group.length).keys()]);
+        group.forEach((student, localIdx) => {
+          if (assignRolesChecked) {
+            const roleIdx = shuffledGroupIndices.indexOf(localIdx);
+            // Limit to our ROLES size or cycle
+            student.role = ROLES[roleIdx % ROLES.length];
+          } else {
+            student.role = null;
+          }
+        });
+      });
+
+      currentResultGroups = finalGroups;
+      renderResultUI();
+      playSuccessSound();
+    }
+
+    // Shuffle Array Utility
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    // Role Reshuffle Option
+    function shuffleRoles() {
+      if (currentResultGroups.length === 0) return;
+
+      currentResultGroups.forEach(group => {
+        const shuffledGroupIndices = shuffle([...Array(group.length).keys()]);
+        group.forEach((student, localIdx) => {
+          const roleIdx = shuffledGroupIndices.indexOf(localIdx);
+          student.role = ROLES[roleIdx % ROLES.length];
+        });
+      });
+
+      renderResultUI();
+      showToast('모둠원들의 자치 역할이 새롭게 조율되었습니다!', 'arrows-spin');
+      playBeep(880, 'sine', 0.2);
+    }
+
+    // Present Results UI with animation classes
+    function renderResultUI() {
+      const container = document.getElementById('groupsDisplayArea');
+      const tools = document.getElementById('resultTools');
+      container.innerHTML = '';
+
+      if (currentResultGroups.length === 0) {
+        tools.classList.add('hidden');
+        return;
+      }
+
+      tools.classList.remove('hidden');
+
+      currentResultGroups.forEach((group, idx) => {
+        const card = document.createElement('div');
+        // Elegant styling for cards representing a group
+        card.className = "bg-slate-800 border border-slate-700/60 rounded-2xl p-5 shadow-lg relative overflow-hidden transition-all duration-300 hover:scale-[1.01] hover:border-indigo-500/40 hover:shadow-indigo-500/5";
+        
+        // Count males and females in this single group
+        const boysCount = group.filter(s => s.gender === '남').length;
+        const girlsCount = group.filter(s => s.gender === '여').length;
+
+        let memberRowsHTML = '';
+        group.forEach(student => {
+          const isBoy = student.gender === '남';
+          const genderBadge = isBoy 
+            ? '<span class="text-[9px] px-1 bg-cyan-950 text-cyan-400 rounded border border-cyan-800">남</span>'
+            : '<span class="text-[9px] px-1 bg-pink-950 text-pink-400 rounded border border-pink-800">여</span>';
+
+          const roleHTML = student.role 
+            ? `<div class="text-[11px] font-bold text-amber-400 flex flex-col items-end">
+                 <span>${student.role.name}</span>
+                 <span class="text-[9px] text-slate-500 font-normal hidden sm:inline">${student.role.desc}</span>
+               </div>` 
+            : '';
+
+          memberRowsHTML += `
+            <div class="flex items-center justify-between py-2 border-b border-slate-800 last:border-0 hover:bg-slate-900/20 px-1 rounded-lg transition duration-150">
+              <div class="flex items-center gap-2">
+                <span class="font-semibold text-slate-100 text-sm">${escapeHTML(student.name)}</span>
+                ${genderBadge}
+              </div>
+              ${roleHTML}
+            </div>
+          `;
+        });
+
+        card.innerHTML = `
+          <!-- Header Banner -->
+          <div class="flex items-center justify-between mb-4 pb-2 border-b border-indigo-500/20">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-extrabold text-sm">
+                ${idx + 1}
+              </div>
+              <h3 class="font-extrabold text-base text-white tracking-tight">${idx + 1}모둠</h3>
+            </div>
+            <div class="text-[10px] text-slate-400 flex items-center gap-1 bg-slate-900/50 px-2 py-1 rounded-lg border border-slate-700/40">
+              <span class="font-bold text-slate-300">${group.length}명</span>
+              <span>(남 ${boysCount} / 여 ${girlsCount})</span>
+            </div>
+          </div>
+          
+          <!-- Members list inside group -->
+          <div class="space-y-1">
+            ${memberRowsHTML}
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // Export to Clipboard (using standard fallbacks)
+    function exportToClipboard() {
+      if (currentResultGroups.length === 0) return;
+
+      let textOutput = `★ 학급 자치시간 모둠 편성 결과 ★\n\n`;
+      currentResultGroups.forEach((group, idx) => {
+        textOutput += `[ ${idx + 1}모둠 ] (${group.length}명)\n`;
+        group.forEach(student => {
+          let studentStr = `- ${student.name} (${student.gender})`;
+          if (student.role) {
+            studentStr += ` | 역할: ${student.role.name} (${student.role.desc})`;
+          }
+          textOutput += `${studentStr}\n`;
+        });
+        textOutput += `\n`;
+      });
+
+      // Secure copying
+      const tempTextArea = document.createElement('textarea');
+      tempTextArea.value = textOutput;
+      document.body.appendChild(tempTextArea);
+      tempTextArea.select();
+      try {
+        document.execCommand('copy');
+        showToast('결과 텍스트가 클립보드에 복사되었습니다!', 'check');
+      } catch (err) {
+        showToast('복사에 실패했습니다. 직접 복사해주세요.', 'xmark');
+      }
+      document.body.removeChild(tempTextArea);
+    }
+
+    // File download as TXT
+    function downloadAsText() {
+      if (currentResultGroups.length === 0) return;
+
+      let textOutput = `★ 학급 자치시간 모둠 편성 결과 ★\n`;
+      textOutput += `생성 시각: ${new Date().toLocaleString()}\n\n`;
+      
+      currentResultGroups.forEach((group, idx) => {
+        textOutput += `=======================\n`;
+        textOutput += `▶ ${idx + 1}모둠 (총 ${group.length}명)\n`;
+        textOutput += `=======================\n`;
+        group.forEach((student, sIdx) => {
+          let line = `${sIdx + 1}. ${student.name} (${student.gender})`;
+          if (student.role) {
+            line += `  -> 역할: ${student.role.name} [${student.role.desc}]`;
+          }
+          textOutput += `${line}\n`;
+        });
+        textOutput += `\n`;
+      });
+
+      const blob = new Blob([textOutput], { type: 'text/plain;charset=utf-8' });
+      const element = document.createElement('a');
+      element.href = URL.createObjectURL(blob);
+      element.download = `자치모둠결과_${new Date().toISOString().slice(0,10)}.txt`;
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
+      showToast('텍스트 파일이 성공적으로 다운로드되었습니다.', 'file-arrow-down');
+    }
+
+    // Prevent HTML injection helper
+    function escapeHTML(str) {
+      return str.replace(/[&<>'"]/g, 
+        tag => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          "'": '&#39;',
+          '"': '&quot;'
+        }[tag] || tag)
+      );
+    }
+  </script>
+</body>
+</html>
